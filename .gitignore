@@ -1,0 +1,34 @@
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- IDE ----
+.idea/
+.vscode/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Runtime data (user uploads served by dufs / API) ----
+uploads/*
+!uploads/.gitkeep
+
+# ---- Backend: tracked separately in its own repository (https://github.com/partdark/markersAPI) ----
+markersAPI/**/bin/
+markersAPI/**/obj/
+markersAPI/.vs/
+
+
+# ---- Frontend: Node / Vite / TypeScript build artifacts ----
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+frontend/public/cesium/
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# ---- Logs ----
+*.log
+npm-debug.log*

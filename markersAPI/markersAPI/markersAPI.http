@@ -1,0 +1,6 @@
+@markersAPI_HostAddress = http://localhost:5172
+
+GET {{markersAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

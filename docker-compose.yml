@@ -1,0 +1,102 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: markers-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_SHARED_BUFFERS: 250MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 500MB
+      POSTGRES_WORK_MEM: 28MB
+    ports:
+      - "5435:5432"
+    volumes:
+      - markersdb_data:/var/lib/postgresql
+    command: >
+      postgres
+      -c max_connections=1000
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - markers-network
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: markers-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - markers-network
+    restart: unless-stopped
+
+  dufs:
+    image: sigoden/dufs:latest
+    container_name: markers-dufs
+    command: ["/data", "--port", "5000", "--bind", "0.0.0.0", "--auth", "${DUFS_USER}:${DUFS_PASSWORD}@/:rw", "--auth", "@/"]
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/data
+    networks:
+      - markers-network
+    restart: unless-stopped
+
+  markers-api:
+    build:
+      context: ./markersAPI
+      dockerfile: markersAPI/Dockerfile
+    container_name: markers-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "UserID=${POSTGRES_USER};Host=postgres;Port=5432;Database=${POSTGRES_DB};Password=${POSTGRES_PASSWORD}"
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS}
+      AdminSeed__Email: ${ADMIN_SEED_EMAIL}
+      AdminSeed__Password: ${ADMIN_SEED_PASSWORD}
+      FileStorage__UploadPath: ${FILE_UPLOAD_PATH}
+      FileStorage__BaseUrl: ${FILE_BASE_URL}
+    volumes:
+      - ./uploads:/app/uploads
+    ports:
+      - "5223:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - markers-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: markers-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - markers-api
+    networks:
+      - markers-network
+    restart: unless-stopped
+
+
+volumes:
+  markersdb_data:
+
+networks:
+  markers-network:
+    driver: bridge
